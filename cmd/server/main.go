@@ -12,6 +12,7 @@ import (
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", httpapi.Health)
+	mux.HandleFunc("/github", httpapi.GithubNotify)
 	handler := middleware.Logging(mux)
 	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Printf("server stopped: %v", err)
