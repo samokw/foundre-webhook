@@ -10,6 +10,7 @@ import (
 
 	"github.com/samokw/foundre-webhook/internal/domain"
 	"github.com/samokw/foundre-webhook/internal/github"
+	"github.com/samokw/foundre-webhook/internal/preview"
 )
 
 func GithubWebhook(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +44,7 @@ func GithubWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if event != "pull_request" {
-		log.Printf("event=%s delivery=%s bytes=%d (ignored)\n", event, deliveryID, len(body))
+		log.Printf("event=%s delivery=%s bytes=%d (ignored)", event, deliveryID, len(body))
 		_, _ = w.Write([]byte("ignored\n"))
 		return
 	}
@@ -65,9 +66,15 @@ func GithubWebhook(w http.ResponseWriter, r *http.Request) {
 		Action: action,
 	}
 
-	log.Printf("number=%d, repo=%s, sha=%s, action=%s\n", pr.Number, pr.Repo, pr.SHA, pr.Action)
+	if err := preview.Handle(pr); err != nil {
+		log.Printf("preview handle failed: %s", err.Error())
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 
-	log.Printf("event=%s delivery=%s bytes=%d\n", event, deliveryID, len(body))
+	log.Printf("number=%d, repo=%s, sha=%s, action=%s", pr.Number, pr.Repo, pr.SHA, pr.Action)
+
+	log.Printf("event=%s delivery=%s bytes=%d", event, deliveryID, len(body))
 
 	_, _ = w.Write([]byte("received\n"))
 }
